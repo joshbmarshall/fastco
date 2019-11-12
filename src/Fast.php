@@ -1,6 +1,8 @@
 <?php
 
-namespace Cognito;
+namespace Cognito\Fast;
+
+use Exception;
 
 /**
  * Login via the fast.co service
@@ -26,7 +28,7 @@ class Fast {
 	 */
 	public static function quickLoginButton($fast_app_key) {
 		$fast = new self($fast_app_key, '');
-		return $fast->renderButton();
+		return $fast->loginButton();
 	}
 
 	/**
@@ -69,24 +71,24 @@ class Fast {
 		}
 
 		if ($identifier && $challengeId && $oth) {
-			$url = 'https://api.fast.co/api/verify/?challengeId=' . $challengeId
-				. '&oth=' . $oth
-				. '&identifier=' . $identifier
-				. '&key=' . $this->fast_app_key
-				. '&secret=' . $this->secret_key;
-
-			$client = new GuzzleHttp\Client();
+			$client = new \GuzzleHttp\Client();
 			$res = $client->request('GET', 'https://api.fast.co/api/verify', [
-				'challengeId' => $challengeId,
-				'oth' => $oth,
-				'identifier' => $identifier,
-				'key' => $this->fast_app_key,
-				'secret' => $this->secret_key,
+				'query' => [
+					'challengeId' => $challengeId,
+					'oth' => $oth,
+					'identifier' => $identifier,
+					'key' => $this->fast_app_key,
+					'secret' => $this->secret_key,
+				],
 			]);
 			$decoded = json_decode($res->getBody());
 
-			if ($decoded && $decoded->success) {
+			if ($decoded && property_exists($decoded, 'success') && $decoded->success) {
 				return true;
+			} else {
+				if ($decoded && property_exists($decoded, 'error')) {
+					throw new Exception($decoded->error);
+				}
 			}
 		}
 		return false;
